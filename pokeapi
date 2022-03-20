@@ -1,0 +1,35 @@
+import psycopg2
+import hidden   # it's script in a separate file generated to store the credentials
+import json
+import requests
+
+secrets = hidden.secrets()
+
+conn = psycopg2.connect(host=secrets['host'],
+        port=secrets['port'],
+        database=secrets['database'],
+        user=secrets['user'],
+        password=secrets['pass'],
+        connect_timeout=3)
+
+cur = conn.cursor()
+sql = 'DROP TABLE IF EXISTS pokeapi;'
+cur.execute(sql)
+conn.commit()
+
+sql = 'CREATE TABLE IF NOT EXISTS pokeapi (id INTEGER, body JSONB);'
+cur.execute(sql)
+conn.commit()
+
+url = 'https://pokeapi.co/api/v2/pokemon?limit=100'
+response = requests.get(url).json()
+
+#print(json.dumps(response, indent=4))
+lst = response['results']
+
+for pok in lst:
+	sql = 'INSERT INTO pokeapi (body) VALUES (%s);';
+	cur.execute(sql, (json.dumps(pok),))
+
+conn.commit()
+cur.close()
